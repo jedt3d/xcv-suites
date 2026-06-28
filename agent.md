@@ -263,7 +263,8 @@ This matters more as the component catalog grows.
 For now:
 
 - root `.xojo_project` stays as the runnable web shell
-- new docs belong in `docs/`
+- shared docs belong in `docs/`
+- platform-specific component docs belong in `docs/<platform>/`
 - new web-specific source should trend toward `web/`
 
 Start with [docs/foundation-plan.md](docs/foundation-plan.md) before making architecture decisions.

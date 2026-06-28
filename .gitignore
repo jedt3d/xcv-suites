@@ -1,0 +1,9 @@
+.DS_Store
+*.xojo_uistate
+.xojo_index/
+Builds*/
+*.debug.app
+*.debug
+*.debug.exe
+*.debug.xojo_binary_project
+

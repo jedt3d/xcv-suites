@@ -42,10 +42,12 @@ No error or warning
 Expected error result:
 
 ```text
-WebPage1.Shown, line 1
+WebRectangleTest.Shown, line 1
 Syntax error
 ...
 ```
+
+The current checked-in validation page is `WebRectangleTest.xojo_code`, but the harness rules are the same for any future test host page or window.
 
 ## Step 2: fix source
 
@@ -56,6 +58,33 @@ If the clipboard contains compile errors:
 - restart from step 1
 
 Do not run the app while compile errors remain.
+
+## Capture failures we have seen
+
+This harness is useful, but it is not perfect. In this repo we have already seen these failure modes:
+
+- OCR failure caused by macOS Dark Mode making the Xojo issue area harder for the macro to read
+- clipboard garbage such as random alphanumeric strings instead of a structured Xojo compiler message
+- stale clipboard content when the result is not read immediately after the macro finishes
+- macro execution succeeding while the captured text is still not trustworthy
+
+Treat these as capture failures, not trusted compiler output.
+
+## What to do when capture looks wrong
+
+If the clipboard result is not one of these:
+
+- `No error or warning`
+- a structured Xojo error that clearly names a file/member and line
+
+then:
+
+1. assume the capture is bad
+2. rerun `Get Xojo Debug Message`
+3. read the clipboard again immediately
+4. only act on the result if the second capture is structured and believable
+
+If repeated retries still produce garbage, note the likely OCR issue rather than inventing a source fix from bad text.
 
 ## Step 3: ask before running
 
@@ -94,6 +123,7 @@ If the user reports a runtime problem, treat that as the next bug to fix and res
 
 - Prefer clipboard truth over assumptions.
 - Treat `No error or warning` as the only clean compile signal.
+- Treat unstructured clipboard text as capture failure, not as a compiler diagnosis.
 - Keep the user in the loop before runtime launch.
 - Keep the feedback collection structured after each run.
 - Ignore the older `xojo-run` analyze-script flow for this repo unless the workflow is intentionally changed again.
@@ -109,3 +139,4 @@ If the user reports a runtime problem, treat that as the next bug to fix and res
 ```
 
 - Clipboard reads may require access to the live system clipboard rather than a sandboxed shell clipboard.
+- When the clipboard contains OCR noise, a second immediate macro run is the first recovery step.

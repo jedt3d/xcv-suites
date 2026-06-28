@@ -23,13 +23,36 @@ This repo is building components first, not a general-purpose theming framework.
 - It is currently a minimal **Web 2** shell with:
   - `App.xojo_code`
   - `Session.xojo_code`
-  - `WebPage1.xojo_code`
+  - `WebRectangleTest.xojo_code`
 - `web/WebXCV/` is the web Xojo library that holds web component classes.
 - `web/WebXCV/WebRectangleXCV.xojo_code` is the first completed component milestone.
+- the current project version is aligned to `0.1.0`
 - `desktop/`, `ios/`, and `android/` are still structural placeholders.
 - `xoji` should be part of the normal agent workflow here so source navigation stays fast once this repo stops being tiny.
 
 Do not read more maturity into the repo than the files justify. One real component exists now, but the suite as a whole is still small.
+
+## Xojo inspector constraint
+
+Treat Xojo's `Inspector Behavior` feature as a static exposure layer only.
+
+For source-defined classes and controls in this repo, it can:
+
+- show or hide properties
+- reorder properties
+- regroup properties
+- set default values
+- expose enum dropdown values
+
+It does not dynamically enable or disable one property based on another property's current value in the IDE.
+
+That means `WebRectangleXCV` must enforce dependency logic at runtime:
+
+- `BorderEnabled = False` means border thickness and border color stay visible in the Inspector but are ignored for drawing
+- `FillColor` is the only custom fill property on `WebRectangleXCV`; a transparent fill color means no interior fill is drawn
+- `CornerAllEnabled = False` or a per-corner enabled flag set to `False` means the stored corner value and style may stay editable but the resolved corner is square
+
+If the project later requires truly conditional Inspector UI, that is a separate IDE extension or plugin problem, not a plain `#tag ViewBehavior` problem.
 
 ## Development order
 
@@ -51,7 +74,7 @@ Also treat `WebFlexLayoutManager` as a first-class dependency during web work, n
 Favor this split:
 
 - **appearance surface**
-  - font size, colors, border, background, gradient, spacing, radii
+  - font size, colors, fill color, border, spacing, radii
 - **component model**
   - state, properties, events, layout inputs
 - **renderer**
@@ -86,8 +109,7 @@ Minimum appearance options currently expected:
 - font size
 - text color
 - border
-- background
-- background gradient
+- fill color
 
 ## Layout manager dependency
 
@@ -206,6 +228,14 @@ That harness is currently the preferred loop:
 4. repeat until `No error or warning`
 5. ask before `Run Xojo App`
 6. ask the user whether it is running as expected
+
+Important real-world caveats from this repo:
+
+- the macro can fail to OCR the Xojo issue area correctly under macOS Dark Mode
+- clipboard content can occasionally be garbage OCR text rather than a real Xojo message
+- clipboard content can occasionally be stale if it is not read immediately after the macro run
+- a non-structured clipboard result should be treated as capture failure first, not as a trusted compiler result
+- the practical response is to rerun `Get Xojo Debug Message` before changing code based on suspicious clipboard text
 
 Do not default back to older analyze-script workflows for this repo unless the user changes the process.
 

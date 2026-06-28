@@ -1,5 +1,7 @@
 # xcv-suites
 
+Primary agent-facing orientation lives in [agent.md](agent.md). Keep that file aligned with the actual repo workflow, component contract, and Xojo harness behavior. Treat this README as the short repo summary, not the authoritative agent playbook.
+
 `xcv-suites` is a workspace for building a family of Xojo canvas-based UI components that keep as much visual and behavioral consistency as possible across four targets:
 
 - Web
@@ -9,23 +11,42 @@
 
 The point is not to pretend every platform is identical. The point is to define one component language, one interaction model, and one visual system that can survive platform differences without turning into four unrelated codebases.
 
-We are starting with **Web first**.
-
-That choice is deliberate. Web gives the fastest feedback loop for layout, rendering, hover states, focus handling, and component behavior. It is the best place to shape the first reference implementation before the same ideas are ported to the other platforms.
+We are starting with **Web first**. Web gives the fastest feedback loop for rendering, sizing, pointer behavior, and component iteration, so it is the reference implementation for the first milestone.
 
 ## Current state
 
-Right now this repo has one finished web component and the project structure around it.
+`v0.1.0` is the first real milestone for this repo.
+
+Right now the repo contains one completed web component and a small test host around it.
 
 - `xcv-suites.xojo_project` is the active Xojo Web 2 host project.
 - `web/WebXCV/` is the web Xojo library for reusable WebCanvas-based components.
-- `web/WebXCV/WebRectangleXCV.xojo_code` is the first implemented component milestone.
-- `WebPage1.xojo_code` is the temporary demo page and compile/run host.
+- `web/WebXCV/WebRectangleXCV.xojo_code` is the first shipped component milestone.
+- `WebRectangleTest.xojo_code` is the current validation page and runtime test host.
 - `desktop/`, `ios/`, and `android/` exist as platform folders.
 - `docs/` is reserved for design notes, specs, and implementation decisions.
 - `xoji` indexing should be used here as the codebase grows so agents can navigate Xojo source with less scanning and lower token cost.
 
-The repo is still early, but it is no longer just scaffolding. The next work should broaden the demo surface and add the next reusable components without losing the property and rendering discipline established by `WebRectangleXCV`.
+The repo is still early, but it is no longer just scaffolding. The next work should broaden the demo surface and add the next reusable components without losing the rendering discipline established by `WebRectangleXCV`.
+
+## WebRectangleXCV v0.1.0
+
+`WebRectangleXCV` currently exposes:
+
+- `FillColor`
+- `BorderEnabled`
+- `BorderThickness`
+- `BorderColor`
+- `CornerAllEnabled`
+- `CornerUnit`
+- per-corner enabled, value, and style properties
+
+Important constraints for this release:
+
+- fill is one explicit color only
+- transparent `FillColor` acts as no-fill
+- gradients are not part of the `v0.1.0` API
+- inspector behavior is static, so dependent properties are enforced at render time rather than dynamically disabled in the IDE
 
 ## Project goal
 
@@ -48,10 +69,10 @@ We do want style customization, but it should stay close to each component. At m
 - font size
 - text color
 - border
-- background
-- background gradient
+- fill color
+- background behavior where the component justifies it
 
-That is enough to let a control adapt without turning the whole suite into a theme engine. Functionality still comes first.
+That is enough to let a control adapt without turning the whole suite into a theme engine. Functionality still comes first, and each component should earn extra style surface by use rather than by speculation.
 
 ## Platform layout
 
@@ -168,5 +189,7 @@ This repo will stay manageable only if those decisions are written down while th
 Start with [docs/foundation-plan.md](docs/foundation-plan.md). It defines the current position on styling, layout-manager dependency, and the first implementation order.
 
 For the active Xojo compile/debug/run loop in this repo, use [docs/xojo-km-harness.md](docs/xojo-km-harness.md).
+
+For the active rectangle milestone details, use [docs/prd-001-web-rectangle-xcv.md](docs/prd-001-web-rectangle-xcv.md).
 
 For agent navigation and token efficiency, this repo should also keep `xoji` indexes fresh and use `.xojo_index/` before scanning large Xojo files directly.

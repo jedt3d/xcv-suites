@@ -34,10 +34,12 @@ At minimum, the style surface should allow controlled adjustment of:
 - font size
 - text color
 - border
-- background
-- background gradient
+- fill color
+- component background behavior when it is justified by the component itself
 
 This is enough to let a component adapt to different use cases without turning the whole library into a skinning framework.
+
+For the current `v0.1.0` milestone, `WebRectangleXCV` is intentionally narrower than the broader long-term wish list. It currently uses a single explicit `FillColor` property rather than a gradient or theme-oriented fill system.
 
 ## 3. Styling philosophy
 
@@ -139,6 +141,7 @@ Deliverables:
 - resize behavior
 - visible/hidden behavior
 - basic style properties
+- one explicit fill color path
 - one demo page inside `WebFlexLayoutManager`
 
 ### Phase 1: core primitives

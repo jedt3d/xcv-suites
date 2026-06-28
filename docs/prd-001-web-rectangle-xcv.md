@@ -4,11 +4,13 @@
 
 Implemented
 
+Tagged release target: `v0.1.0`
+
 The core `WebRectangleXCV` component is complete for the first web milestone.
 
 What is complete:
 
-- border, solid fill, and top-to-bottom gradient fill
+- single-color fill rendering, border rendering, and corner rendering
 - rounded and bevel corner support
 - per-corner configuration
 - inspector-visible property surface
@@ -36,7 +38,7 @@ This component is the first proving ground for:
 ## Goals
 
 1. Create a web rectangle component that is simple to understand and predictable to render.
-2. Support the requested border, fill, gradient, and corner treatments without introducing a broad theming system.
+2. Support one explicit fill color plus the rectangle border and corner treatments without reopening a broader fill API.
 3. Make the component layout-safe inside `WebFlexLayoutManager`.
 4. Use this component as the reference for later `DesktopRectangleXCV` or equivalent platform ports.
 
@@ -99,54 +101,31 @@ Functional expectations:
 
 ## B. Fill
 
-The component must support either no fill, solid fill, or linear gradient fill.
+The current milestone exposes one custom fill property on `WebRectangleXCV`.
 
-### Solid fill
+Current rule:
 
-Required controls:
+- fill is resolved directly from `FillColor`
+- if `FillColor` is transparent, no interior fill is drawn
 
-- visible: `True/False`
-- color: RGB
-- opacity: percent
+Implications:
 
-Functional expectations:
+- `FillColor` is the only fill property on the component
+- there is no custom fill enable flag on the component
+- there is no custom gradient surface on the component
+- a transparent fill color produces an effectively unfilled interior
 
-- opacity is applied to the fill only
-- solid fill must render cleanly inside the border and corner shape
+## Inspector behavior constraint
 
-### Linear gradient fill
+Xojo's `Inspector Behavior` for a source-defined control is static. It can expose, hide, reorder, regroup, and default properties, but it does not dynamically disable dependent properties when another property changes in the IDE.
 
-Supported direction for v1:
+For `WebRectangleXCV`, treat the following as the required semantic contract:
 
-- top -> bottom only
+- `BorderEnabled = False` means no border is drawn, even though `BorderThickness` and `BorderColor` remain editable in the Inspector
+- `FillColor` is the only custom fill inspector property on the component in the current milestone
+- `CornerAllEnabled = False` or a per-corner enabled flag set to `False` means that corner resolves as disabled even though its stored value and style remain editable in the Inspector
 
-Required controls:
-
-- begin color: RGB
-- end color: RGB
-- midline shift: percent
-
-#### Midline shift definition
-
-This value controls where the transition midpoint visually occurs between the start and end colors.
-
-Examples:
-
-- `50%` means the transition midpoint sits around the center of the rectangle
-- `25%` means the shift happens nearer the top, so the end color dominates more of the lower area
-- `75%` means the shift happens nearer the bottom, so the begin color occupies more of the upper area
-
-This should be implemented as a controlled top-to-bottom gradient bias, not as an arbitrary gradient editor.
-
-### Fill exclusivity
-
-For v1, the component should have one effective fill mode at a time:
-
-- none
-- solid
-- gradient
-
-Do not allow ambiguous combinations.
+This is an IDE limitation, not a rendering bug. If conditional Inspector enable/disable behavior is required later, that should be planned as a separate IDE plugin or extension track.
 
 ## C. Corners
 
@@ -199,43 +178,33 @@ This is a proposed API direction, not yet implementation law:
 
 ### Border
 
-- `BorderVisible As Boolean`
+- `BorderEnabled As Boolean`
 - `BorderThickness As Double`
 - `BorderColor As Color`
 
 ### Fill
 
-- `FillVisible As Boolean`
-- `FillMode As XCVFillMode`
 - `FillColor As Color`
-- `FillOpacityPercent As Double`
-- `GradientBeginColor As Color`
-- `GradientEndColor As Color`
-- `GradientMidpointPercent As Double`
 
 ### Corners
 
-- `CornersEnabled As Boolean`
+- `CornerAllEnabled As Boolean`
 - `CornerUnit As XCVCornerUnit`
-- `TopLeftCornerEnabled As Boolean`
-- `TopRightCornerEnabled As Boolean`
-- `BottomLeftCornerEnabled As Boolean`
-- `BottomRightCornerEnabled As Boolean`
-- `TopLeftCornerValue As Double`
-- `TopRightCornerValue As Double`
-- `BottomLeftCornerValue As Double`
-- `BottomRightCornerValue As Double`
-- `TopLeftCornerStyle As XCVCornerStyle`
-- `TopRightCornerStyle As XCVCornerStyle`
-- `BottomLeftCornerStyle As XCVCornerStyle`
-- `BottomRightCornerStyle As XCVCornerStyle`
+- `CornerTopLeftEnabled As Boolean`
+- `CornerTopLeftValue As Double`
+- `CornerTopLeftStyle As XCVCornerStyle`
+- `CornerTopRightEnabled As Boolean`
+- `CornerTopRightValue As Double`
+- `CornerTopRightStyle As XCVCornerStyle`
+- `CornerBottomLeftEnabled As Boolean`
+- `CornerBottomLeftValue As Double`
+- `CornerBottomLeftStyle As XCVCornerStyle`
+- `CornerBottomRightEnabled As Boolean`
+- `CornerBottomRightValue As Double`
+- `CornerBottomRightStyle As XCVCornerStyle`
 
 ### Suggested enums
 
-- `XCVFillMode`
-  - `None`
-  - `Solid`
-  - `LinearGradient`
 - `XCVCornerUnit`
   - `Pixels`
   - `Percent`
@@ -285,25 +254,21 @@ Required behavior:
 The first implementation is acceptable when all of these are true:
 
 1. The component compiles and runs in the web host project.
-2. A rectangle can be shown with no border and no fill.
-3. A rectangle can be shown with solid fill only.
-4. A rectangle can be shown with border only.
-5. A rectangle can be shown with both border and solid fill.
-6. A rectangle can be shown with top-to-bottom gradient fill.
-7. Gradient midpoint shifting is visibly correct at example values like `25`, `50`, and `75`.
-8. Rounded corners render correctly.
-9. Bevel corners render correctly.
-10. Individual corner settings work independently.
-11. The component behaves correctly inside `WebFlexLayoutManager`.
+2. A rectangle can be shown using a single explicit fill color.
+3. A rectangle can be shown with border only when `FillColor` is transparent.
+4. A rectangle can be shown with both `FillColor` and border.
+5. Rounded corners render correctly.
+6. Bevel corners render correctly.
+7. Individual corner settings work independently.
+8. The component behaves correctly inside `WebFlexLayoutManager`.
 
 ## Demo Requirements
 
 The implementation phase should include a simple demo surface showing:
 
-- no fill / no border
 - border only
-- solid fill
-- gradient fill with three midpoint examples
+- single fill color
+- single fill color with border
 - rounded corners
 - bevel corners
 - mixed corner settings
@@ -311,12 +276,14 @@ The implementation phase should include a simple demo surface showing:
 
 For this milestone, the checked-in host page remains a minimal validation surface rather than the full demo matrix above. The full showcase page is still a follow-up task, not a blocker for considering the base rectangle component finished.
 
+The current checked-in validation host is `WebRectangleTest.xojo_code`.
+
 ## Resolved Decisions
 
 These were settled during implementation:
 
-1. `FillVisible` remains a separate Boolean. `FillMode` still describes the active fill strategy when fill is enabled.
-2. Opacity applies to the fill result, including gradient rows.
+1. The fill API is intentionally limited to one explicit `FillColor` property.
+2. The fill path now resolves directly from `FillColor`, and transparency is the only no-fill mechanism.
 3. Percent-based corners use half of the smaller rectangle dimension as the reference.
 4. The API is normalized to `TopLeft`, `TopRight`, `BottomLeft`, and `BottomRight`.
 5. Border thickness accepts `Double` input but is rounded and clamped to integer pixel thickness in v1.
@@ -326,16 +293,15 @@ These were settled during implementation:
 
 Recommended order:
 
-1. define enums and property surface
+1. define fill, border, and corner property surface
 2. implement normalized geometry model
-3. implement solid fill
+3. implement single fill color path
 4. implement border
 5. implement rounded corners
 6. implement bevel corners
-7. implement top-to-bottom gradient with midpoint shift
-8. place component inside `WebFlexLayoutManager`
-9. build demo page
+7. place component inside `WebFlexLayoutManager`
+8. build demo page
 
-## Branch Intent
+## Release Intent
 
-This document is the first PRD artifact for the first component on the feature branch dedicated to `WebRectangleXCV`.
+This document describes the `WebRectangleXCV` surface that ships with the first repository release tag, `v0.1.0`.

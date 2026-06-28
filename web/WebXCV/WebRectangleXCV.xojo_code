@@ -11,8 +11,9 @@ Inherits WebCanvas
 		  g.ClearRectangle(0, 0, canvasWidth, canvasHeight)
 		  
 		  Var borderPixels As Integer = EffectiveBorderThickness(canvasWidth, canvasHeight)
-		  Var drawBorder As Boolean = BorderVisible And borderPixels > 0
-		  Var drawFill As Boolean = FillVisible And FillMode <> FillModes.NoFill
+		  Var drawBorder As Boolean = BorderEnabled And borderPixels > 0
+		  Var fillColor As Color = FillColor
+		  Var drawFill As Boolean = fillColor.Alpha < 255
 		  
 		  Var outerTopLeftRadius As Integer
 		  Var outerTopRightRadius As Integer
@@ -37,10 +38,10 @@ Inherits WebCanvas
 		        Var innerBottomRightRadius As Integer
 		        
 		        InsetResolvedCornerRadii(borderPixels, innerWidth, innerHeight, outerTopLeftRadius, outerTopRightRadius, outerBottomLeftRadius, outerBottomRightRadius, innerTopLeftRadius, innerTopRightRadius, innerBottomLeftRadius, innerBottomRightRadius)
-		        DrawFillRows(g, borderPixels, innerWidth, innerHeight, innerTopLeftRadius, innerTopRightRadius, innerBottomLeftRadius, innerBottomRightRadius, topLeftStyle, topRightStyle, bottomLeftStyle, bottomRightStyle)
+		        DrawFillRows(g, borderPixels, innerWidth, innerHeight, innerTopLeftRadius, innerTopRightRadius, innerBottomLeftRadius, innerBottomRightRadius, topLeftStyle, topRightStyle, bottomLeftStyle, bottomRightStyle, fillColor)
 		      End If
 		    Else
-		      DrawFillRows(g, 0, canvasWidth, canvasHeight, outerTopLeftRadius, outerTopRightRadius, outerBottomLeftRadius, outerBottomRightRadius, topLeftStyle, topRightStyle, bottomLeftStyle, bottomRightStyle)
+		      DrawFillRows(g, 0, canvasWidth, canvasHeight, outerTopLeftRadius, outerTopRightRadius, outerBottomLeftRadius, outerBottomRightRadius, topLeftStyle, topRightStyle, bottomLeftStyle, bottomRightStyle, fillColor)
 		    End If
 		  End If
 		  
@@ -67,17 +68,6 @@ Inherits WebCanvas
 		Private Function ApplyCoverage(baseColor As Color, coverage As Double) As Color
 		  Var visibleFraction As Double = (255.0 - baseColor.Alpha) / 255.0
 		  Var combinedVisible As Double = visibleFraction * ClampDouble(coverage, 0.0, 1.0)
-		  Var alpha As Integer = Round(255.0 * (1.0 - combinedVisible))
-		  
-		  Return Color.RGB(baseColor.Red, baseColor.Green, baseColor.Blue, alpha)
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function ApplyFillOpacity(baseColor As Color) As Color
-		  Var opacityFraction As Double = ClampDouble(FillOpacityPercent, 0.0, 100.0) / 100.0
-		  Var visibleFraction As Double = (255.0 - baseColor.Alpha) / 255.0
-		  Var combinedVisible As Double = visibleFraction * opacityFraction
 		  Var alpha As Integer = Round(255.0 * (1.0 - combinedVisible))
 		  
 		  Return Color.RGB(baseColor.Red, baseColor.Green, baseColor.Blue, alpha)
@@ -130,26 +120,13 @@ Inherits WebCanvas
 	#tag EndMethod
 
 	#tag Method, Flags = &h21
-		Private Sub DrawFillRows(g As WebGraphics, inset As Integer, drawWidth As Integer, drawHeight As Integer, topLeftRadius As Integer, topRightRadius As Integer, bottomLeftRadius As Integer, bottomRightRadius As Integer, topLeftStyle As CornerStyles, topRightStyle As CornerStyles, bottomLeftStyle As CornerStyles, bottomRightStyle As CornerStyles)
-		  Var solidColor As Color = ApplyFillOpacity(FillColor)
-		  
+		Private Sub DrawFillRows(g As WebGraphics, inset As Integer, drawWidth As Integer, drawHeight As Integer, topLeftRadius As Integer, topRightRadius As Integer, bottomLeftRadius As Integer, bottomRightRadius As Integer, topLeftStyle As CornerStyles, topRightStyle As CornerStyles, bottomLeftStyle As CornerStyles, bottomRightStyle As CornerStyles, fillColor As Color)
 		  For row As Integer = 0 To drawHeight - 1
 		    Var leftX As Double
 		    Var rightX As Double
-		    Var rowColor As Color
 		    
 		    GetRowSpan(row, drawWidth, drawHeight, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, topLeftStyle, topRightStyle, bottomLeftStyle, bottomRightStyle, leftX, rightX)
-		    
-		    Select Case FillMode
-		    Case FillModes.Solid
-		      rowColor = solidColor
-		    Case FillModes.LinearGradient
-		      rowColor = ApplyFillOpacity(GradientColorAtRow(row, drawHeight))
-		    Else
-		      Continue
-		    End Select
-		    
-		    DrawHorizontalSpan(g, inset + row, inset + leftX, inset + rightX, rowColor)
+		    DrawHorizontalSpan(g, inset + row, inset + leftX, inset + rightX, fillColor)
 		  Next
 		End Sub
 	#tag EndMethod
@@ -201,7 +178,7 @@ Inherits WebCanvas
 
 	#tag Method, Flags = &h21
 		Private Function EffectiveBorderThickness(canvasWidth As Integer, canvasHeight As Integer) As Integer
-		  If Not BorderVisible Then Return 0
+		  If Not BorderEnabled Then Return 0
 		  
 		  Var maxThickness As Integer = MinInteger(canvasWidth, canvasHeight) \ 2
 		  Return ClampInteger(Round(BorderThickness), 0, maxThickness)
@@ -210,7 +187,7 @@ Inherits WebCanvas
 
 	#tag Method, Flags = &h21
 		Private Function EffectiveCornerRadius(enabled As Boolean, requestedValue As Double, canvasWidth As Integer, canvasHeight As Integer) As Integer
-		  If Not CornersEnabled Or Not enabled Then Return 0
+		  If Not CornerAllEnabled Or Not enabled Then Return 0
 		  
 		  Var cornerValue As Double = MaxDouble(0.0, requestedValue)
 		  
@@ -227,7 +204,7 @@ Inherits WebCanvas
 
 	#tag Method, Flags = &h21
 		Private Function EffectiveCornerStyle(enabled As Boolean, requestedStyle As CornerStyles) As CornerStyles
-		  If Not CornersEnabled Or Not enabled Then Return CornerStyles.Rounded
+		  If Not CornerAllEnabled Or Not enabled Then Return CornerStyles.Rounded
 		  
 		  Return requestedStyle
 		End Function
@@ -251,31 +228,6 @@ Inherits WebCanvas
 	#tag EndMethod
 
 	#tag Method, Flags = &h21
-		Private Function GradientBlendAt(position As Double) As Double
-		  Var midpoint As Double = ClampDouble(GradientMidpointPercent, 0.0, 100.0) / 100.0
-		  midpoint = ClampDouble(midpoint, 0.01, 0.99)
-		  
-		  Var clampedPosition As Double = ClampDouble(position, 0.0, 1.0)
-		  
-		  If clampedPosition <= midpoint Then
-		    Return 0.5 * (clampedPosition / midpoint)
-		  End If
-		  
-		  Return 0.5 + (0.5 * ((clampedPosition - midpoint) / (1.0 - midpoint)))
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function GradientColorAtRow(row As Integer, totalRows As Integer) As Color
-		  If totalRows <= 1 Then Return GradientEndColor
-		  
-		  Var denominator As Double = totalRows - 1
-		  Var position As Double = row / denominator
-		  Return InterpolateColor(GradientBeginColor, GradientEndColor, GradientBlendAt(position))
-		End Function
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
 		Private Sub InsetResolvedCornerRadii(insetPixels As Integer, innerWidth As Integer, innerHeight As Integer, outerTopLeftRadius As Integer, outerTopRightRadius As Integer, outerBottomLeftRadius As Integer, outerBottomRightRadius As Integer, ByRef innerTopLeftRadius As Integer, ByRef innerTopRightRadius As Integer, ByRef innerBottomLeftRadius As Integer, ByRef innerBottomRightRadius As Integer)
 		  innerTopLeftRadius = MaxInteger(0, outerTopLeftRadius - insetPixels)
 		  innerTopRightRadius = MaxInteger(0, outerTopRightRadius - insetPixels)
@@ -284,18 +236,6 @@ Inherits WebCanvas
 		  
 		  NormalizeResolvedCornerRadii(innerWidth, innerHeight, innerTopLeftRadius, innerTopRightRadius, innerBottomLeftRadius, innerBottomRightRadius)
 		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h21
-		Private Function InterpolateColor(startColor As Color, endColor As Color, amount As Double) As Color
-		  Var blend As Double = ClampDouble(amount, 0.0, 1.0)
-		  Var red As Integer = Round(startColor.Red + ((endColor.Red - startColor.Red) * blend))
-		  Var green As Integer = Round(startColor.Green + ((endColor.Green - startColor.Green) * blend))
-		  Var blue As Integer = Round(startColor.Blue + ((endColor.Blue - startColor.Blue) * blend))
-		  Var alpha As Integer = Round(startColor.Alpha + ((endColor.Alpha - startColor.Alpha) * blend))
-		  
-		  Return Color.RGB(red, green, blue, alpha)
-		End Function
 	#tag EndMethod
 
 	#tag Method, Flags = &h21
@@ -392,37 +332,37 @@ Inherits WebCanvas
 
 	#tag Method, Flags = &h21
 		Private Sub ResolveOuterCornerMetrics(drawWidth As Integer, drawHeight As Integer, ByRef topLeftRadius As Integer, ByRef topRightRadius As Integer, ByRef bottomLeftRadius As Integer, ByRef bottomRightRadius As Integer, ByRef topLeftStyle As CornerStyles, ByRef topRightStyle As CornerStyles, ByRef bottomLeftStyle As CornerStyles, ByRef bottomRightStyle As CornerStyles)
-		  topLeftRadius = EffectiveCornerRadius(TopLeftCornerEnabled, TopLeftCornerValue, drawWidth, drawHeight)
-		  topRightRadius = EffectiveCornerRadius(TopRightCornerEnabled, TopRightCornerValue, drawWidth, drawHeight)
-		  bottomLeftRadius = EffectiveCornerRadius(BottomLeftCornerEnabled, BottomLeftCornerValue, drawWidth, drawHeight)
-		  bottomRightRadius = EffectiveCornerRadius(BottomRightCornerEnabled, BottomRightCornerValue, drawWidth, drawHeight)
+		  topLeftRadius = EffectiveCornerRadius(CornerTopLeftEnabled, CornerTopLeftValue, drawWidth, drawHeight)
+		  topRightRadius = EffectiveCornerRadius(CornerTopRightEnabled, CornerTopRightValue, drawWidth, drawHeight)
+		  bottomLeftRadius = EffectiveCornerRadius(CornerBottomLeftEnabled, CornerBottomLeftValue, drawWidth, drawHeight)
+		  bottomRightRadius = EffectiveCornerRadius(CornerBottomRightEnabled, CornerBottomRightValue, drawWidth, drawHeight)
 		  
 		  NormalizeResolvedCornerRadii(drawWidth, drawHeight, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius)
 		  
-		  topLeftStyle = EffectiveCornerStyle(TopLeftCornerEnabled, TopLeftCornerStyle)
-		  topRightStyle = EffectiveCornerStyle(TopRightCornerEnabled, TopRightCornerStyle)
-		  bottomLeftStyle = EffectiveCornerStyle(BottomLeftCornerEnabled, BottomLeftCornerStyle)
-		  bottomRightStyle = EffectiveCornerStyle(BottomRightCornerEnabled, BottomRightCornerStyle)
+		  topLeftStyle = EffectiveCornerStyle(CornerTopLeftEnabled, CornerTopLeftStyle)
+		  topRightStyle = EffectiveCornerStyle(CornerTopRightEnabled, CornerTopRightStyle)
+		  bottomLeftStyle = EffectiveCornerStyle(CornerBottomLeftEnabled, CornerBottomLeftStyle)
+		  bottomRightStyle = EffectiveCornerStyle(CornerBottomRightEnabled, CornerBottomRightStyle)
 		End Sub
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
 		Sub SetAllCorners(enabled As Boolean, cornerValue As Double, cornerStyle As CornerStyles = CornerStyles.Rounded)
-		  CornersEnabled = enabled
-		  TopLeftCornerEnabled = enabled
-		  TopRightCornerEnabled = enabled
-		  BottomLeftCornerEnabled = enabled
-		  BottomRightCornerEnabled = enabled
+		  CornerAllEnabled = enabled
+		  CornerTopLeftEnabled = enabled
+		  CornerTopRightEnabled = enabled
+		  CornerBottomLeftEnabled = enabled
+		  CornerBottomRightEnabled = enabled
 		  
-		  TopLeftCornerValue = cornerValue
-		  TopRightCornerValue = cornerValue
-		  BottomLeftCornerValue = cornerValue
-		  BottomRightCornerValue = cornerValue
+		  CornerTopLeftValue = cornerValue
+		  CornerTopRightValue = cornerValue
+		  CornerBottomLeftValue = cornerValue
+		  CornerBottomRightValue = cornerValue
 		  
-		  TopLeftCornerStyle = cornerStyle
-		  TopRightCornerStyle = cornerStyle
-		  BottomLeftCornerStyle = cornerStyle
-		  BottomRightCornerStyle = cornerStyle
+		  CornerTopLeftStyle = cornerStyle
+		  CornerTopRightStyle = cornerStyle
+		  CornerBottomLeftStyle = cornerStyle
+		  CornerBottomRightStyle = cornerStyle
 		  
 		  RefreshAppearance
 		End Sub
@@ -430,7 +370,7 @@ Inherits WebCanvas
 
 
 	#tag Property, Flags = &h0
-		BorderColor As Color = &c000000
+		BorderEnabled As Boolean = True
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
@@ -438,35 +378,15 @@ Inherits WebCanvas
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		BorderVisible As Boolean = True
+		BorderColor As Color = &c000000
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		BottomLeftCornerEnabled As Boolean = False
+		FillColor As Color = &cFFFFFF00
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		BottomLeftCornerStyle As CornerStyles = CornerStyles.Rounded
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		BottomLeftCornerValue As Double = 0.0
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		BottomRightCornerEnabled As Boolean = False
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		BottomRightCornerStyle As CornerStyles = CornerStyles.Rounded
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		BottomRightCornerValue As Double = 0.0
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		CornersEnabled As Boolean = True
+		CornerAllEnabled As Boolean = True
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
@@ -474,55 +394,51 @@ Inherits WebCanvas
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		FillColor As Color = &cFFFFFF
+		CornerTopLeftEnabled As Boolean = False
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		FillMode As FillModes = FillModes.Solid
+		CornerTopLeftStyle As CornerStyles = CornerStyles.Rounded
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		FillOpacityPercent As Double = 100.0
+		CornerTopLeftValue As Double = 0.0
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		FillVisible As Boolean = True
+		CornerTopRightEnabled As Boolean = False
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		GradientBeginColor As Color = &cFFFFFF
+		CornerTopRightStyle As CornerStyles = CornerStyles.Rounded
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		GradientEndColor As Color = &cE1E1E1
+		CornerTopRightValue As Double = 0.0
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		GradientMidpointPercent As Double = 50.0
+		CornerBottomLeftEnabled As Boolean = False
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		TopLeftCornerEnabled As Boolean = False
+		CornerBottomLeftStyle As CornerStyles = CornerStyles.Rounded
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		TopLeftCornerStyle As CornerStyles = CornerStyles.Rounded
+		CornerBottomLeftValue As Double = 0.0
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		TopLeftCornerValue As Double = 0.0
+		CornerBottomRightEnabled As Boolean = False
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		TopRightCornerEnabled As Boolean = False
+		CornerBottomRightStyle As CornerStyles = CornerStyles.Rounded
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
-		TopRightCornerStyle As CornerStyles = CornerStyles.Rounded
-	#tag EndProperty
-
-	#tag Property, Flags = &h0
-		TopRightCornerValue As Double = 0.0
+		CornerBottomRightValue As Double = 0.0
 	#tag EndProperty
 
 
@@ -534,12 +450,6 @@ Inherits WebCanvas
 	#tag Enum, Name = CornerUnits, Type = Integer, Flags = &h0
 		Pixels = 0
 		Percent = 1
-	#tag EndEnum
-
-	#tag Enum, Name = FillModes, Type = Integer, Flags = &h0
-		NoFill = 0
-		  Solid = 1
-		LinearGradient = 2
 	#tag EndEnum
 
 
@@ -665,89 +575,49 @@ Inherits WebCanvas
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="BorderColor"
+			Name="BorderEnabled"
 			Visible=true
-			Group="Behavior"
-			InitialValue="&c000000"
-			Type="Color"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="BorderThickness"
-			Visible=true
-			Group="Behavior"
-			InitialValue="1.0"
-			Type="Double"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="BorderVisible"
-			Visible=true
-			Group="Behavior"
+			Group="Border"
 			InitialValue="True"
 			Type="Boolean"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="BottomLeftCornerEnabled"
+			Name="BorderThickness"
 			Visible=true
-			Group="Behavior"
-			InitialValue="False"
-			Type="Boolean"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="BottomLeftCornerStyle"
-			Visible=true
-			Group="Behavior"
-			InitialValue="0"
-			Type="CornerStyles"
-			EditorType="Enum"
-			#tag EnumValues
-				"0 - Rounded"
-				"1 - Bevel"
-			#tag EndEnumValues
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="BottomLeftCornerValue"
-			Visible=true
-			Group="Behavior"
-			InitialValue="0.0"
+			Group="Border"
+			InitialValue="1.0"
 			Type="Double"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="BottomRightCornerEnabled"
+			Name="BorderColor"
 			Visible=true
-			Group="Behavior"
-			InitialValue="False"
-			Type="Boolean"
+			Group="Border"
+			InitialValue="&c000000"
+			Type="Color"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="BottomRightCornerStyle"
+			Name="FillColor"
 			Visible=true
-			Group="Behavior"
-			InitialValue="0"
-			Type="CornerStyles"
-			EditorType="Enum"
-			#tag EnumValues
-				"0 - Rounded"
-				"1 - Bevel"
-			#tag EndEnumValues
+			Group="Fill"
+			InitialValue="&cFFFFFF00"
+			Type="Color"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="BottomRightCornerValue"
+			Name="CornerAllEnabled"
 			Visible=true
-			Group="Behavior"
-			InitialValue="0.0"
-			Type="Double"
+			Group="Corner"
+			InitialValue="True"
+			Type="Boolean"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="CornerUnit"
 			Visible=true
-			Group="Behavior"
+			Group="Corner"
 			InitialValue="0"
 			Type="CornerUnits"
 			EditorType="Enum"
@@ -757,86 +627,17 @@ Inherits WebCanvas
 			#tag EndEnumValues
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="CornersEnabled"
+			Name="CornerTopLeftEnabled"
 			Visible=true
-			Group="Behavior"
-			InitialValue="True"
-			Type="Boolean"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="FillColor"
-			Visible=true
-			Group="Behavior"
-			InitialValue="&cFFFFFF"
-			Type="Color"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="FillMode"
-			Visible=true
-			Group="Behavior"
-			InitialValue="1"
-			Type="FillModes"
-			EditorType="Enum"
-			#tag EnumValues
-				"0 - NoFill"
-				"1 - Solid"
-				"2 - LinearGradient"
-			#tag EndEnumValues
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="FillOpacityPercent"
-			Visible=true
-			Group="Behavior"
-			InitialValue="100.0"
-			Type="Double"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="FillVisible"
-			Visible=true
-			Group="Behavior"
-			InitialValue="True"
-			Type="Boolean"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="GradientBeginColor"
-			Visible=true
-			Group="Behavior"
-			InitialValue="&cFFFFFF"
-			Type="Color"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="GradientEndColor"
-			Visible=true
-			Group="Behavior"
-			InitialValue="&cE1E1E1"
-			Type="Color"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="GradientMidpointPercent"
-			Visible=true
-			Group="Behavior"
-			InitialValue="50.0"
-			Type="Double"
-			EditorType=""
-		#tag EndViewProperty
-		#tag ViewProperty
-			Name="TopLeftCornerEnabled"
-			Visible=true
-			Group="Behavior"
+			Group="Corner"
 			InitialValue="False"
 			Type="Boolean"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="TopLeftCornerStyle"
+			Name="CornerTopLeftStyle"
 			Visible=true
-			Group="Behavior"
+			Group="Corner"
 			InitialValue="0"
 			Type="CornerStyles"
 			EditorType="Enum"
@@ -846,25 +647,25 @@ Inherits WebCanvas
 			#tag EndEnumValues
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="TopLeftCornerValue"
+			Name="CornerTopLeftValue"
 			Visible=true
-			Group="Behavior"
+			Group="Corner"
 			InitialValue="0.0"
 			Type="Double"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="TopRightCornerEnabled"
+			Name="CornerTopRightEnabled"
 			Visible=true
-			Group="Behavior"
+			Group="Corner"
 			InitialValue="False"
 			Type="Boolean"
 			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="TopRightCornerStyle"
+			Name="CornerTopRightStyle"
 			Visible=true
-			Group="Behavior"
+			Group="Corner"
 			InitialValue="0"
 			Type="CornerStyles"
 			EditorType="Enum"
@@ -874,9 +675,65 @@ Inherits WebCanvas
 			#tag EndEnumValues
 		#tag EndViewProperty
 		#tag ViewProperty
-			Name="TopRightCornerValue"
+			Name="CornerTopRightValue"
 			Visible=true
-			Group="Behavior"
+			Group="Corner"
+			InitialValue="0.0"
+			Type="Double"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="CornerBottomLeftEnabled"
+			Visible=true
+			Group="Corner"
+			InitialValue="False"
+			Type="Boolean"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="CornerBottomLeftStyle"
+			Visible=true
+			Group="Corner"
+			InitialValue="0"
+			Type="CornerStyles"
+			EditorType="Enum"
+			#tag EnumValues
+				"0 - Rounded"
+				"1 - Bevel"
+			#tag EndEnumValues
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="CornerBottomLeftValue"
+			Visible=true
+			Group="Corner"
+			InitialValue="0.0"
+			Type="Double"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="CornerBottomRightEnabled"
+			Visible=true
+			Group="Corner"
+			InitialValue="False"
+			Type="Boolean"
+			EditorType=""
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="CornerBottomRightStyle"
+			Visible=true
+			Group="Corner"
+			InitialValue="0"
+			Type="CornerStyles"
+			EditorType="Enum"
+			#tag EnumValues
+				"0 - Rounded"
+				"1 - Bevel"
+			#tag EndEnumValues
+		#tag EndViewProperty
+		#tag ViewProperty
+			Name="CornerBottomRightValue"
+			Visible=true
+			Group="Corner"
 			InitialValue="0.0"
 			Type="Double"
 			EditorType=""

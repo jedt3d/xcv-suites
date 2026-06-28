@@ -15,15 +15,17 @@ That choice is deliberate. Web gives the fastest feedback loop for layout, rende
 
 ## Current state
 
-Right now this repo is still at the setup stage.
+Right now this repo has one finished web component and the project structure around it.
 
-- `xcv-suites.xojo_project` is a minimal Xojo Web 2 shell.
-- `WebPage1.xojo_code` is still a very small starter page used to prove the compile/debug/run loop.
-- `web/`, `desktop/`, `ios/`, and `android/` exist as platform folders.
+- `xcv-suites.xojo_project` is the active Xojo Web 2 host project.
+- `web/WebXCV/` is the web Xojo library for reusable WebCanvas-based components.
+- `web/WebXCV/WebRectangleXCV.xojo_code` is the first implemented component milestone.
+- `WebPage1.xojo_code` is the temporary demo page and compile/run host.
+- `desktop/`, `ios/`, and `android/` exist as platform folders.
 - `docs/` is reserved for design notes, specs, and implementation decisions.
 - `xoji` indexing should be used here as the codebase grows so agents can navigate Xojo source with less scanning and lower token cost.
 
-So the structure is ahead of the component code. That is fine. I would rather make the platform boundaries clear now than retrofit them after the first few controls land.
+The repo is still early, but it is no longer just scaffolding. The next work should broaden the demo surface and add the next reusable components without losing the property and rendering discipline established by `WebRectangleXCV`.
 
 ## Project goal
 
@@ -58,6 +60,7 @@ The intended structure is:
 ```text
 xcv-suites/
 ├── web/        # First implementation target and reference behavior
+│   └── WebXCV/ # Web component library inside the Xojo project
 ├── desktop/    # Desktop port once the web model is stable
 ├── ios/        # Mobile touch-first port
 ├── android/    # Mobile touch-first port
@@ -143,9 +146,9 @@ If this milestone is weak, every later platform port will get harder.
 
 ## Running the current project
 
-At the moment the checked-in Xojo project is a plain Web 2 app shell.
+At the moment the checked-in Xojo project is a Web 2 host with the first `WebXCV` component wired into it.
 
-Open `xcv-suites.xojo_project` in Xojo and run it normally. Expect a mostly empty starter page until the first web components are added.
+Open `xcv-suites.xojo_project` in Xojo and run it normally. Expect a simple validation page rather than a polished demo gallery.
 
 ## What to document as the repo grows
 

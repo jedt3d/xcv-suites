@@ -24,11 +24,12 @@ This repo is building components first, not a general-purpose theming framework.
   - `App.xojo_code`
   - `Session.xojo_code`
   - `WebPage1.xojo_code`
-- There is no real component code yet.
-- `web/`, `desktop/`, `ios/`, `android/`, and `docs/` are structural placeholders.
+- `web/WebXCV/` is the web Xojo library that holds web component classes.
+- `web/WebXCV/WebRectangleXCV.xojo_code` is the first completed component milestone.
+- `desktop/`, `ios/`, and `android/` are still structural placeholders.
 - `xoji` should be part of the normal agent workflow here so source navigation stays fast once this repo stops being tiny.
 
-Do not read more maturity into the repo than the files justify.
+Do not read more maturity into the repo than the files justify. One real component exists now, but the suite as a whole is still small.
 
 ## Development order
 
@@ -118,6 +119,8 @@ Use this folder for:
 - web-only utilities
 - notes that exist only because of web runtime constraints
 
+Inside `web/`, treat `WebXCV/` as the Xojo library boundary for reusable web component classes.
+
 ### `desktop/`
 
 Reserved for the desktop port after the web behavior is stable.
@@ -188,6 +191,8 @@ The most sensible near-term path is:
 6. Implement a very small starter set of controls.
 7. Add a demo page that shows states and layout behavior.
 8. Only then begin the desktop port.
+
+The rectangle milestone is complete enough to serve as the first rendering and property reference, but the broader demo surface is still a follow-up task.
 
 ## Active Xojo harness
 

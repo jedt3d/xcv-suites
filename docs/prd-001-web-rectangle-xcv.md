@@ -2,7 +2,23 @@
 
 ## Status
 
-Draft
+Implemented
+
+The core `WebRectangleXCV` component is complete for the first web milestone.
+
+What is complete:
+
+- border, solid fill, and top-to-bottom gradient fill
+- rounded and bevel corner support
+- per-corner configuration
+- inspector-visible property surface
+- anti-aliased edge rendering for cleaner corner output
+- successful use in the current web host project
+
+What is still intentionally light:
+
+- the demo host is still a minimal compile/run page, not a full showcase page
+- the broader web component set is still to come
 
 ## Purpose
 
@@ -248,6 +264,10 @@ Corner values, border thickness, and percent-derived radii must be clamped so th
 
 The component must render cleanly in whatever rectangle the parent gives it.
 
+### Rule 5: Edge quality matters
+
+Rounded and bevel corners should not snap harshly to full-pixel edges when a smoother result is possible. For this first component, edge coverage should be rendered cleanly enough that corner borders do not look visibly jagged at ordinary sizes.
+
 ## Layout Contract
 
 `WebRectangleXCV` must be safe inside `WebFlexLayoutManager`.
@@ -289,15 +309,18 @@ The implementation phase should include a simple demo surface showing:
 - mixed corner settings
 - at least one example inside `WebFlexLayoutManager`
 
-## Open Questions
+For this milestone, the checked-in host page remains a minimal validation surface rather than the full demo matrix above. The full showcase page is still a follow-up task, not a blocker for considering the base rectangle component finished.
 
-These should be settled during implementation:
+## Resolved Decisions
 
-1. Should fill visibility remain a separate Boolean, or should `FillMode = None` be the only no-fill state?
-2. Should opacity affect only solid fill, or also gradient colors?
-3. Should percent-based corners use width, height, or the smaller dimension as the reference?
-4. Do we want the requested `lw` / `lr` names exposed in API, or should they be normalized to `BottomLeft` / `BottomRight` immediately?
-5. Should border thickness accept fractional pixels, or clamp to integer pixels in v1?
+These were settled during implementation:
+
+1. `FillVisible` remains a separate Boolean. `FillMode` still describes the active fill strategy when fill is enabled.
+2. Opacity applies to the fill result, including gradient rows.
+3. Percent-based corners use half of the smaller rectangle dimension as the reference.
+4. The API is normalized to `TopLeft`, `TopRight`, `BottomLeft`, and `BottomRight`.
+5. Border thickness accepts `Double` input but is rounded and clamped to integer pixel thickness in v1.
+6. `WebCanvas.DiffEngineDisabled` is not part of the component API surface. It remains an instance-level runtime setting that can be tuned separately from the rectangle appearance contract.
 
 ## Implementation Order
 
